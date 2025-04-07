@@ -1,0 +1,40 @@
+trigger:
+- main
+
+stages:
+- stage: Build
+  displayName: Build Stage
+  jobs:
+  - job: Build
+    displayName: Build Job
+    pool:
+      name: 'self-agent-01'  # Your self-hosted agent pool name
+    steps: 
+    # View contents in the working directory
+    - powershell: |
+        Write-Host "Contents in System Default Working Directory"
+        Get-ChildItem -Recurse "$(System.DefaultWorkingDirectory)"
+    
+    - powershell: |
+        Write-Host "Before copying contents to Build Artifact Directory"
+        Get-ChildItem -Recurse "$(Build.ArtifactStagingDirectory)"
+
+    # Copy files from terraform-manifests to the artifact staging directory
+    - task: CopyFiles@2
+      inputs:
+        SourceFolder: '$(System.DefaultWorkingDirectory)/terraform-manifests'
+        Contents: '**'
+        TargetFolder: '$(Build.ArtifactStagingDirectory)'
+        OverWrite: true
+
+    # View contents in the artifact staging directory after copying
+    - powershell: |
+        Write-Host "After copying to Build Artifact Directory"
+        Get-ChildItem -Recurse "$(Build.ArtifactStagingDirectory)"
+
+    # Publish the copied artifacts
+    - task: PublishBuildArtifacts@1
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+        ArtifactName: 'terraform-manifests'
+        publishLocation: 'Container'
